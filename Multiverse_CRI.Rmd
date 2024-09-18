@@ -1,0 +1,197 @@
+---
+title: "Multiveres"
+output: html_document
+---
+
+This code is forked from https://github.com/nbreznau/CRI/blob/master/code/06_CRI_Multiverse.Rmd. The original code was used to benchmark explained variance through a multiverse analysis in Breznau et al. 2022.
+
+Here we update it to define all possible decision points for the current project.
+
+```{r setup, include=FALSE}
+library("pacman")
+
+options(scipen = 999)
+
+pacman::p_load("tidyverse","dplyr", "lavaan")
+```
+
+## Data
+
+Taken from the basic workflow of team 18. All commented out because it was already run.
+
+# ```{r team18_sim, warning = FALSE, message = FALSE}
+# t18m <- read.csv("team18_multi.csv", header = TRUE)
+# 
+# # doesn't include all macro-indicators, merge in here
+# cri_macro <- select(read.csv("cri_macro.csv", header = TRUE), -country)
+# 
+# # merge on country
+# df <- left_join(t18m, cri_macro, by = c("iso_country","year"))
+# 
+# # make numeric
+# df <- df %>%
+#     mutate(wdi_unempilo = as.numeric(wdi_unempilo),
+#            socx_oecd = as.numeric(socx_oecd),
+#            gdp_oecd = as.numeric(gdp_oecd),
+#            ginid_solt = as.numeric(ginid_solt),
+#            migstock_un = as.numeric(migstock_un),
+#            netmigpct = as.numeric(netmigpct))
+# ```
+
+## Data Frame Prep
+
+Here we add different versions of the dependent variable
+
+1. Latent 6-item
+2. Latent 4-item
+
+# ```{r dvs}
+#  L6 <- '
+#    l6 =~ incdiff_c + jobs_c + oldage_c + unemp_c + housing_c + health_c
+#    '
+#  
+#  L4 <- '
+#    l6 =~ incdiff_c + jobs_c + oldage_c + unemp_c
+#  '
+#  
+#  # subset data to include only full information cases
+#  
+#  df2 <- subset(df, !is.na(incdiff_c) & !is.na(jobs_c) & !is.na(oldage_c) & !is.na(unemp_c) & !is.na(housing_c) & !is.na(health_c))
+#  
+#  # measurement models
+#  fitL6 <- sem(L6, data = df2)
+#  fitL4 <- sem(L4, data = df2)
+#  
+#  # predict factor scores and append
+#  df2$latent6 <- lavPredict(fitL6)
+#  df2$latent4 <- lavPredict(fitL4)
+#  
+#  df2 <- subset(df2, select = c(X, latent6, latent4))
+#  
+#  colnames(df2) <- c("X", "latent6", "latent4")
+#  
+#  # column names are f'd
+#  write.csv(df2, "df2.csv", row.names = F)
+# df2 <- read.csv("df2.csv")
+#  
+#  df <- df %>%
+#    left_join(df2, by = "X")
+#  
+# write_rds(df, "df.rds")
+#  
+# ```
+
+### Fixed data
+
+```{r newdata}
+df <- readRDS("df.rds")
+
+# fix missing iso3c in Czechia
+
+df <- df %>%
+  mutate(iso_country = ifelse(country == "Czech Republic", 203, iso_country))
+```
+
+
+### Add Variables
+
+Here we add in various choices that the teams made
+
+```{r additions}
+
+rich_western_democracies_iso3c <- c(
+  "AUT", # Austria
+  "BEL", # Belgium
+  "DNK", # Denmark
+  "FIN", # Finland
+  "FRA", # France
+  "DEU", # Germany
+  "ISL", # Iceland
+  "IRL", # Ireland
+  "ITA", # Italy
+  "LUX", # Luxembourg
+  "NLD", # Netherlands
+  "NOR", # Norway
+  "PRT", # Portugal
+  "ESP", # Spain
+  "SWE", # Sweden
+  "CHE", # Switzerland
+  "GBR", # United Kingdom
+  "AUS", # Australia
+  "NZL", # New Zealand
+  "CAN", # Canada
+  "USA", # United States
+  "JPN"  # Japan
+)
+
+all_countries <- unique(df$iso_country)
+
+df <- df %>%
+  mutate(western_rich = ifelse(iso_country %in% rich_western_democracies_iso3c, 1, NA),
+         country1 = ifelse(iso_country == all_countries[1], NA, 1),
+         country2 = ifelse(iso_country == all_countries[2], NA, 1),
+         country3 = ifelse(iso_country == all_countries[3], NA, 1),
+         country4 = ifelse(iso_country == all_countries[4], NA, 1),
+         country5 = ifelse(iso_country == all_countries[5], NA, 1),
+         country6 = ifelse(iso_country == all_countries[6], NA, 1),
+         country7 = ifelse(iso_country == all_countries[7], NA, 1),
+         country8 = ifelse(iso_country == all_countries[8], NA, 1),
+         country9 = ifelse(iso_country == all_countries[9], NA, 1),
+         country10 = ifelse(iso_country == all_countries[10], NA, 1),
+         country11 = ifelse(iso_country == all_countries[11], NA, 1),
+         country12 = ifelse(iso_country == all_countries[12], NA, 1),
+         country13 = ifelse(iso_country == all_countries[13], NA, 1),
+         country14 = ifelse(iso_country == all_countries[14], NA, 1),
+         country15 = ifelse(iso_country == all_countries[15], NA, 1),
+         country16 = ifelse(iso_country == all_countries[16], NA, 1),
+         country17 = ifelse(iso_country == all_countries[17], NA, 1),
+         country18 = ifelse(iso_country == all_countries[18], NA, 1),
+         country19 = ifelse(iso_country == all_countries[19], NA, 1),
+         country20 = ifelse(iso_country == all_countries[20], NA, 1)) %>%
+  select(-c(gdp_twn, mignet_un))
+
+```
+
+```{r models, warning = FALSE}
+
+# logit DVs
+dvs <- c("jobs","unemployed","reduce_income_diff","old_age_care","housing","health")
+
+# linear DVs
+dvs_c <- c("jobs_c","unemp_c","incdiff_c","oldage_c","housing_c","health_c", "latent6", "latent4")
+
+# test variables stock
+test_stock <- c("foreignpct", "migstock_wb", "migstock_un", "migstock_oecd")
+
+# test variable flow
+test_flow <- c("netmigpct")
+
+
+```
+
+
+Notes:
+
+Do all of the following for both logistic and linear models, and for each dependent variable:
+
+Run every model with each of the four versions of the test variable for stock of immigrants (there are four of them), but do not combine these in any single model.
+
+Use every possible combination of country-level variables
+
+Use models with and without dummies for country and dummies for year (like 'country-level fixed effects')
+
+Use models with and without clustered standard errors at the country-level
+
+Use models with and without clustered standard errors at the year-level
+
+For all models that contain the individual level variable "age", run them all without and then again with the age squared variable "agesq", but do not run any model with "agesq" that do not contain "age".
+
+Use either "gdp_wb" or "gdp_oecd" of "gni_wb" but do not use these together in a single model as they all measure GDP from different sources.
+
+Use either "ginid_solt" or "ginim_dolt" or "gini_wb" or "gini_wid" in a model, but not in combination as they all measure the same thing Gini, but from different sources.
+
+Use either "wdi_empprilo" or "wdi_unempilo" but not in combination as they both measure the un/employment rate.
+
+Run all above models on a subset of the data indicated by the variable "western_rich".
+
+Run all above models by subsetting the data to drop one country indicated by the 20 variables "country1" through "country20".
