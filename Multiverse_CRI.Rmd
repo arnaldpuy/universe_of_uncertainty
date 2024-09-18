@@ -1,5 +1,5 @@
 ---
-title: "Multiveres"
+title: "Multiverse"
 output: html_document
 ---
 
