@@ -166,7 +166,7 @@ test_stock <- c("foreignpct", "migstock_wb", "migstock_un", "migstock_oecd")
 # test variable flow
 test_flow <- c("netmigpct")
 
-
+write_rds(df, "df.rds")
 ```
 
 
